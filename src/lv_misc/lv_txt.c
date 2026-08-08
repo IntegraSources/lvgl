@@ -828,7 +828,16 @@ static uint32_t lv_txt_iso8859_1_conv_wc(uint32_t c)
  */
 static uint32_t lv_txt_iso8859_1_next(const char * txt, uint32_t len, uint32_t * i)
 {
-    if(i == NULL) return txt[0];
+    /* ZeroCalc local patch -- SM091-94.
+     * `len` was added to this decoder family by b566d29c ("feat(label): add
+     * lv_draw_label_strview() for drawing non-nullterminated strings"), which guarded
+     * the indexed read below but left this `i == NULL` peek reading txt[0] regardless.
+     * Callers ask for "the letter after the run" with the remaining length, and that
+     * length is 0 at the end of every run -- lv_txt_get_width() at lv_txt.c:393 and
+     * lv_draw_label_strview() at lv_draw_label.c:224 -- so the peek read one byte past
+     * the buffer. lv_txt_utf8_next() already returns 0 in that case; this makes the
+     * ISO8859-1 decoder agree. */
+    if(i == NULL) return len == 0 ? 0 : txt[0];
 
     uint8_t letter = *i >= len ? 0 : txt[*i];
     (*i)++;
